@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UT - Talent Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background-color: #f4f6f9; }
+    .navbar { background: #601a1a !important; }
+    .card { border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .navbar-brand { line-height: 1.2; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark mb-4 shadow-sm" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold text-white text-decoration-none d-flex align-items-center" href="#">
+        <img src="https://yjoszqcnfhqucdjfnryn.supabase.co/storage/v1/object/public/wms_photos/UT%20Logo_modified.png" alt="UT Logo" style="height: 45px; margin-right: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+        <div style="line-height: 1.2;">
+          Universal Tractor Co., Ltd.<br>
+          <small style="font-size: 0.8rem; font-weight: 400; letter-spacing: 0.5px;">Talent Management System</small>
+        </div>
+      </a>
+      <div>
+        <a href="index.html" class="btn btn-light btn-sm mx-1">Directory</a>
+        <a href="transaction.html" class="btn btn-outline-light btn-sm mx-1">HR Records</a>
+        <a href="dashboard.html" class="btn btn-outline-light btn-sm mx-1">Analytics</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card p-4">
+      <h4 class="mb-4 text-primary fw-bold">Employee Directory Setup</h4>
+      <ul class="nav nav-tabs mb-4">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#createEmp">Register Employee</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#editEmp">Edit Profile</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#dept">Departments</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#settings">Job Structure</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="createEmp">
+          <form id="formCreate" onsubmit="handleEmpSubmit(event, 'create')">
+            <div class="row g-3">
+              <div class="col-md-3"><label class="fw-bold">Employee ID</label><input type="text" class="form-control" name="code" required></div>
+              <div class="col-md-3"><label class="fw-bold">Full Name</label><input type="text" class="form-control" name="name" required></div>
+              <div class="col-md-3"><label class="fw-bold">Department</label><select class="form-select dept-dropdown" name="dept" onchange="updateSubAndPos(this, 'create')" required><option value="">Loading...</option></select></div>
+              <div class="col-md-3"><label class="fw-bold">Sub-Department</label><select class="form-select sub-dept-dropdown" name="subDept"><option value="">Select Dept First</option></select></div>
+              <div class="col-md-3"><label class="fw-bold">Position</label><select class="form-select create-position" name="position"><option value="">Select Dept First</option></select></div>
+              <div class="col-md-3"><label class="fw-bold">Phone</label><input type="text" class="form-control" name="phone"></div>
+              <div class="col-md-3"><label class="fw-bold">Email</label><input type="email" class="form-control" name="email"></div>
+              <div class="col-md-3"><label class="fw-bold">Profile Photo</label><input type="file" class="form-control" id="photoFile" accept="image/*"></div>
+              <div class="col-md-4"><label class="fw-bold">Bio / Skills</label><textarea class="form-control" name="bio" rows="3"></textarea></div>
+              <div class="col-md-8"><label class="fw-bold">Internal Remarks</label><textarea class="form-control" name="remark" rows="3" placeholder="Additional details..."></textarea></div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3 px-4" id="btnCreate">Register Profile</button>
+          </form>
+        </div>
+
+        <div class="tab-pane fade" id="editEmp">
+          <form id="formEdit" onsubmit="handleEmpSubmit(event, 'edit')">
+            <div class="row g-3 mb-3 bg-light p-2 rounded">
+              <div class="col-md-4"><label class="fw-bold">Select Employee</label><select class="form-select border-primary" id="editEmpSelect" name="code" onchange="fetchEmpData()" required><option value="">Loading...</option></select></div>
+              <div class="col-md-3 align-self-end" id="statusContainer" style="display:none;">
+                <label class="fw-bold text-dark mb-2">Employment Status</label>
+                <div class="form-check form-switch fs-5"><input class="form-check-input border-secondary" type="checkbox" id="statusToggle" name="status" checked><label class="form-check-label fw-bold text-success" for="statusToggle" id="statusLabel">Active</label></div>
+              </div>
+            </div>
+            <div class="row g-3" id="editFields" style="display:none;">
+              <div class="col-md-3"><label class="fw-bold">Full Name</label><input type="text" class="form-control" name="name" required></div>
+              <div class="col-md-3"><label class="fw-bold">Department</label><select class="form-select dept-dropdown" name="dept" onchange="updateSubAndPos(this, 'edit')" required></select></div>
+              <div class="col-md-3"><label class="fw-bold">Sub-Department</label><select class="form-select sub-dept-dropdown" name="subDept"></select></div>
+              <div class="col-md-3"><label class="fw-bold">Position</label><select class="form-select edit-position" name="position" id="editPositionSelect"></select></div>
+              <div class="col-md-3"><label class="fw-bold">Phone</label><input type="text" class="form-control" name="phone"></div>
+              <div class="col-md-3"><label class="fw-bold">Email</label><input type="email" class="form-control" name="email"></div>
+              <div class="col-md-6"><label class="fw-bold">Bio / Skills</label><textarea class="form-control" name="bio" rows="2"></textarea></div>
+              <div class="col-md-3"><label class="fw-bold">Current Photo</label><br><img id="editEmpThumbnail" src="" style="max-height: 80px; display: none; border-radius: 5px; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span id="noImageText" class="text-muted" style="display:none; font-size:0.9rem;">No Photo</span></div>
+              <div class="col-md-3"><label class="fw-bold">Update Photo</label><input type="file" class="form-control" id="editPhotoFile" accept="image/*"></div>
+              <div class="col-md-3 mt-3"><div class="p-3 border rounded text-center bg-white shadow-sm"><label class="fw-bold text-primary mb-2">Portal QR Code</label><br><img id="qrCodeImg" src="" style="width:130px; height:130px; display:none; border-radius: 5px;"><br><a id="qrDownloadBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-2" style="display:none;">Download QR</a></div></div>
+              <div class="col-md-9 mt-3"><label class="fw-bold">Internal Remarks</label><textarea class="form-control" name="remark" rows="4"></textarea></div>
+              <input type="hidden" name="photoUrl" id="existingPhotoUrl">
+              <div class="col-md-12"><button type="submit" class="btn btn-success px-4" id="btnEdit">Update Profile</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="tab-pane fade" id="dept">
+          <form id="formDept" onsubmit="submitDeptForm(event)">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="fw-bold">Main Department</label>
+                <input list="mainDeptList" class="form-control border-primary" name="main" placeholder="e.g., Operations" required>
+                <datalist id="mainDeptList"></datalist>
+              </div>
+              <div class="col-md-4">
+                  <label class="fw-bold">Sub-Department</label>
+                  <input type="text" class="form-control border-primary" name="sub" placeholder="e.g., Logistics" required>
+              </div>
+              <div class="col-md-4 align-self-end"><button type="submit" class="btn btn-primary w-100">Add Division</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="tab-pane fade" id="settings">
+          <form onsubmit="addSettingPair(event)">
+            <div class="row g-3">
+              <div class="col-md-4"><label class="fw-bold">Department</label><select id="pairDept" class="form-select border-primary" required><option value="">Select Department...</option></select></div>
+              <div class="col-md-4"><label class="fw-bold">Job Position</label><input type="text" id="pairPos" class="form-control border-primary" placeholder="e.g. Senior Analyst" required></div>
+              <div class="col-md-4 align-self-end"><button type="submit" class="btn btn-secondary w-100">Add Structure</button></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="supabase-config.js"></script>
+
+  <script>
+    let appData = { emps: [], depts: [], settings: { departments: {}, system: {}, leaveTypes: [] } }; 
+
+    document.getElementById('statusToggle').addEventListener('change', function() {
+      let lbl = document.getElementById('statusLabel');
+      if(this.checked) { lbl.innerText = 'Active'; lbl.className = 'form-check-label fw-bold text-success'; } 
+      else { lbl.innerText = 'Resigned / Inactive'; lbl.className = 'form-check-label fw-bold text-danger'; }
+    });
+
+    window.onload = function() { loadAllData(); }
+
+    async function loadAllData() {
+      try {
+        const { data: eData, error: eErr } = await supabase.from('employees').select('*').order('created_at', { ascending: true });
+        const { data: dData, error: dErr } = await supabase.from('departments').select('*');
+        // ဤနေရာတွင် tms_settings ဟု ပြင်ဆင်ထားပါသည်
+        const { data: sData, error: sErr } = await supabase.from('tms_settings').select('*');
+
+        if(eErr || dErr || sErr) throw new Error("Failed to fetch data from Supabase.");
+
+        let empsArray = (eData || []).map(e => [e.code, e.name, e.bio, e.position, e.dept, e.phone, e.email, e.photoUrl, e.remark, e.status]);
+        let deptsArray = (dData || []).map(d => [d.main, d.sub]);
+
+        let settingsObj = { departments: {}, system: {}, leaveTypes: [] };
+        const systemKeys = ['Office Lat', 'Office Lng', 'Geo Radius', 'Work Start', 'Work End'];
+        
+        (sData || []).forEach(row => {
+            let cat = row.category; let sub = row.subcategory;
+            if(systemKeys.includes(cat)) { settingsObj.system[cat] = sub; }
+            else if(cat === 'Leave Type') { settingsObj.leaveTypes.push(sub); }
+            else {
+                if(!settingsObj.departments[cat]) settingsObj.departments[cat] = [];
+                settingsObj.departments[cat].push(sub);
+            }
+        });
+
+        appData = { emps: empsArray, depts: deptsArray, settings: settingsObj };
+        renderDepts(); 
+        renderEmps();
+      } catch(err) {
+        Swal.fire('Connection Error', err.message, 'error');
+        document.getElementById('editEmpSelect').innerHTML = '<option value="">Error loading data.</option>';
+      }
+    }
+
+    function renderDepts() {
+      let depts = appData.depts || [];
+      let mainDepts = [...new Set(depts.map(d => d[0]).filter(d => d))];
+      let deptOpts = '<option value="">Select Department...</option>' + mainDepts.map(d => `<option value="${d}">${d}</option>`).join('');
+      
+      document.querySelectorAll('.dept-dropdown').forEach(el => el.innerHTML = deptOpts);
+      let pairDept = document.getElementById('pairDept'); if(pairDept) pairDept.innerHTML = deptOpts;
+      
+      let dataListEl = document.getElementById('mainDeptList');
+      if(dataListEl) dataListEl.innerHTML = mainDepts.map(d => `<option value="${d}"></option>`).join('');
+    }
+
+    function renderEmps() {
+      let emps = appData.emps || [];
+      let activeEmps = emps.map(i => `<option value="${i[0]}">${i[0]} - ${i[1]} ${i[9] === 'Inactive' ? '(Resigned)' : ''}</option>`).join('');
+      let empSelectEl = document.getElementById('editEmpSelect');
+      if(empSelectEl) empSelectEl.innerHTML = activeEmps === '' ? '<option value="">No Data Found</option>' : '<option value="">Select Employee...</option>' + activeEmps;
+    }
+
+    function updateSubAndPos(deptEl, actionType) {
+      let form = deptEl.closest('form'); let mainDept = deptEl.value;
+      let subSelect = form.querySelector('.sub-dept-dropdown');
+      if(subSelect) {
+        let depts = appData.depts || [];
+        let subs = depts.filter(d => d[0] === mainDept).map(d => d[1]).filter(s => s);
+        subSelect.innerHTML = '<option value="">Select Sub-Department...</option>' + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+      }
+
+      let posTarget = actionType === 'create' ? '.create-position' : '.edit-position';
+      let posSelect = form.querySelector(posTarget);
+      if(posSelect) {
+        let settings = appData.settings || { departments: {} };
+        let positions = settings.departments[mainDept] || [];
+        posSelect.innerHTML = '<option value="">Select Position...</option>' + positions.map(p => `<option value="${p}">${p}</option>`).join('');
+      }
+    }
+
+    async function submitDeptForm(e) {
+      e.preventDefault(); 
+      let form = e.target; 
+      let data = Object.fromEntries(new FormData(form).entries());
+      let btn = form.querySelector('button[type="submit"]');
+      let originalText = btn.innerText; btn.disabled = true; btn.innerText = "Adding...";
+
+      try {
+        const { error } = await supabase.from('departments').insert([{ main: data.main, sub: data.sub }]);
+        if(error) throw error;
+        Swal.fire('Success', 'Department saved successfully.', 'success'); 
+        form.reset(); loadAllData();
+      } catch(err) { Swal.fire('Error', err.message, 'error'); } 
+      finally { btn.disabled = false; btn.innerText = originalText; }
+    }
+
+    async function addSettingPair(e) {
+      e.preventDefault(); 
+      let dept = document.getElementById('pairDept').value; let pos = document.getElementById('pairPos').value;
+      let form = e.target; let btn = form.querySelector('button[type="submit"]');
+      let originalText = btn.innerText; btn.disabled = true; btn.innerText = "Adding...";
+
+      try {
+        // ဤနေရာတွင် tms_settings ဟု ပြင်ဆင်ထားပါသည်
+        const { error } = await supabase.from('tms_settings').insert([{ category: dept, subcategory: pos }]);
+        if(error) throw error;
+        Swal.fire('Added', 'Job Structure saved.', 'success'); 
+        document.getElementById('pairPos').value = ''; loadAllData();
+      } catch (err) { Swal.fire('Error', err.message, 'error'); }
+      finally { btn.disabled = false; btn.innerText = originalText; }
+    }
+
+    async function handleEmpSubmit(e, action) {
+      e.preventDefault(); 
+      let btn = action === 'create' ? document.getElementById('btnCreate') : document.getElementById('btnEdit');
+      btn.disabled = true; btn.innerText = "Uploading...";
+      let form = e.target; let data = Object.fromEntries(new FormData(form).entries());
+      let fileInput = action === 'create' ? document.getElementById('photoFile') : document.getElementById('editPhotoFile');
+      if(action === 'edit') data.status = document.getElementById('statusToggle').checked ? 'Active' : 'Inactive';
+
+      let finalDept = data.subDept ? `${data.dept} > ${data.subDept}` : data.dept;
+      let payload = Object.assign({}, data); payload.dept = finalDept; delete payload.subDept;
+
+      try {
+        if(fileInput.files.length > 0) {
+          let file = fileInput.files[0];
+          let safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+          let fileName = `profile_${Date.now()}_${safeFileName}`;
+          
+          const { error: uploadError } = await supabase.storage.from('tms_photos').upload(fileName, file);
+          if (uploadError) throw uploadError;
+          const { data: urlData } = supabase.storage.from('tms_photos').getPublicUrl(fileName);
+          payload.photoUrl = urlData.publicUrl;
+        } else { 
+          payload.photoUrl = action === 'edit' ? document.getElementById('existingPhotoUrl').value : ""; 
+        }
+
+        btn.innerText = "Saving to Database...";
+
+        if(action === 'create') {
+          const { error } = await supabase.from('employees').insert([payload]);
+          if(error) throw error;
+          Swal.fire('Success', "New Employee profile saved successfully.", 'success');
+          form.reset();
+        } else {
+          const { error } = await supabase.from('employees').update(payload).eq('code', payload.code);
+          if(error) throw error;
+          Swal.fire('Success', "Employee profile updated successfully.", 'success');
+        }
+        loadAllData();
+      } catch (err) { Swal.fire('Error', err.message, 'error'); } 
+      finally { btn.disabled = false; btn.innerText = action === 'create' ? "Register Profile" : "Update Profile"; }
+    }
+
+    function fetchEmpData() {
+      const code = document.getElementById('editEmpSelect').value; const emp = appData.emps.find(i => i[0] == code);
+      if(emp) {
+        document.getElementById('editFields').style.display = 'flex'; document.getElementById('statusContainer').style.display = 'block';
+        let frm = document.getElementById('formEdit');
+        
+        let dParts = emp[4] ? emp[4].split(' > ') : [""];
+        frm.name.value = emp[1]; frm.bio.value = emp[2]; 
+        
+        frm.dept.value = dParts[0].trim(); updateSubAndPos(frm.dept, 'edit'); 
+        if(dParts.length > 1 && frm.subDept) frm.subDept.value = dParts[1].trim(); 
+        frm.position.value = emp[3]; 
+        
+        frm.phone.value = emp[5]; frm.email.value = emp[6]; frm.remark.value = emp[8];
+        let status = emp[9] !== undefined ? emp[9] : 'Active'; let toggle = document.getElementById('statusToggle');
+        toggle.checked = (status === 'Active' || status === ''); toggle.dispatchEvent(new Event('change'));
+        
+        let photoData = emp[7]; let thumbImg = document.getElementById('editEmpThumbnail'); let noImgText = document.getElementById('noImageText');
+        document.getElementById('existingPhotoUrl').value = photoData;
+        if(photoData && photoData !== "") { thumbImg.src = photoData; thumbImg.style.display = 'block'; noImgText.style.display = 'none'; } 
+        else { thumbImg.src = ""; thumbImg.style.display = 'none'; noImgText.style.display = 'block'; }
+
+        // Portal URL အတွက် ပြင်ဆင်ခြင်း
+        let currentUrl = window.location.href.split('?')[0];
+        let basePath = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+        let portalUrl = basePath + "/portal.html?emp=" + encodeURIComponent(emp[0]);
+        
+        let qrData = encodeURIComponent(portalUrl);
+        let qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=" + qrData;
+        
+        document.getElementById('qrCodeImg').src = qrUrl; document.getElementById('qrCodeImg').style.display = 'inline-block';
+        document.getElementById('qrDownloadBtn').href = qrUrl; document.getElementById('qrDownloadBtn').style.display = 'inline-block';
+      } else { document.getElementById('editFields').style.display = 'none'; document.getElementById('statusContainer').style.display = 'none'; }
+    }
+  </script>
+</body>
+</html>
