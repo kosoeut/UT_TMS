@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UT - Individual Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style> body { background-color: #f4f6f9; } .navbar { background: #601a1a !important; } </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-dark mb-4 shadow-sm">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold text-white d-flex align-items-center">
+        <img src="https://yjoszqcnfhqucdjfnryn.supabase.co/storage/v1/object/public/wms_photos/UT%20Logo_modified.png" style="height: 35px; margin-right: 10px; border-radius: 4px;">
+        <div style="line-height: 1.1;" id="portalTitle">Universal Tractor Co., Ltd.<br><small style="font-size: 0.75rem;">Individual Portal</small></div>
+      </span>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 650px;">
+    
+    <div class="card p-3 mb-3 shadow-sm border-0" id="selectBoxArea">
+      <label class="fw-bold mb-2 text-primary">1. Select Your Profile</label>
+      <select id="empSelect" class="form-select border-primary" onchange="loadProfile()"><option value="">Loading Data...</option></select>
+    </div>
+
+    <div id="profileBox" class="card p-3 mb-3 align-items-center bg-white rounded border-0 shadow-sm" style="display:none; flex-direction:row;">
+      <img id="profImg" src="" style="width:70px; height:70px; object-fit:cover; border-radius:50%; border: 3px solid #f4f6f9;">
+      <div class="ms-3 flex-grow-1">
+         <h5 id="profName" class="mb-1 fw-bold text-primary"></h5>
+         <div id="profPos" class="text-dark fw-bold small mb-1"></div>
+         <div id="profDept" class="text-muted small"></div>
+         <span id="profCodeBadge" class="badge bg-secondary mt-1"></span>
+      </div>
+    </div>
+
+    <div id="formsSection" style="display:none;">
+      <ul class="nav nav-pills mb-3 nav-justified bg-white rounded shadow-sm p-1">
+        <li class="nav-item"><a class="nav-link active fw-bold" data-bs-toggle="tab" href="#attTab"><i class="bi bi-geo-alt-fill"></i> Attendance</a></li>
+        <li class="nav-item"><a class="nav-link fw-bold text-secondary" data-bs-toggle="tab" href="#leaveTab"><i class="bi bi-calendar-event"></i> Leave</a></li>
+        <li class="nav-item"><a class="nav-link fw-bold text-info" data-bs-toggle="tab" href="#ledgerTab"><i class="bi bi-journal-text"></i> My Ledger</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="attTab">
+          <div class="card p-3 shadow-sm border-0 border-top border-primary border-4">
+            <h6 class="fw-bold mb-3 text-secondary">Daily Time Record</h6>
+            <div class="alert alert-light border small mb-3">
+              <div class="d-flex justify-content-between mb-1"><strong>Time Status:</strong> <span id="timeStat" class="text-primary">Calculating...</span></div>
+              <div class="d-flex justify-content-between"><strong>Location:</strong> <span id="geoStat" class="text-muted">Fetching GPS...</span></div>
+            </div>
+            <div class="d-flex justify-content-between gap-2">
+              <button class="btn btn-success w-50 fw-bold py-2" id="btnIn" onclick="submitAtt('Check-In')" disabled><i class="bi bi-box-arrow-in-right"></i> Check In</button>
+              <button class="btn btn-danger w-50 fw-bold py-2" id="btnOut" onclick="submitAtt('Check-Out')" disabled><i class="bi bi-box-arrow-right"></i> Check Out</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="leaveTab">
+          <div class="card p-3 shadow-sm border-0 border-top border-warning border-4">
+            <h6 class="fw-bold mb-3 text-secondary">Leave Application</h6>
+            <select id="leaveType" class="form-select mb-3" onchange="checkLeaveType()"><option value="">Select Leave Type...</option></select>
+            <div class="row g-2 mb-3">
+              <div class="col-6"><label class="small fw-bold">Start Date</label><input type="date" id="lStart" class="form-control" onchange="calcDays()"></div>
+              <div class="col-6"><label class="small fw-bold">End Date</label><input type="date" id="lEnd" class="form-control" onchange="calcDays()"></div>
+            </div>
+            <div class="mb-3"><label class="small fw-bold">Total Days</label><input type="number" id="lDays" class="form-control bg-light" readonly></div>
+            <div class="mb-3"><label class="small fw-bold">Reason</label><textarea id="lReason" class="form-control" rows="2"></textarea></div>
+            <div class="mb-3" id="photoUploadBox" style="display:none;">
+              <label class="small fw-bold text-danger"><i class="bi bi-file-medical"></i> Medical Certificate (Required)</label>
+              <input type="file" id="lPhoto" class="form-control" accept="image/*">
+            </div>
+            <button class="btn btn-warning w-100 fw-bold shadow-sm" id="btnLeave" onclick="submitLeave()">Submit Application</button>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="ledgerTab">
+           <div class="card p-3 shadow-sm border-0 border-top border-info border-4">
+             <h6 class="fw-bold mb-2 text-secondary">Individual Record History</h6>
+             
+             <div class="row g-2 mb-3 bg-light p-2 rounded">
+                <div class="col-4">
+                   <select id="filterMonth" class="form-select form-select-sm" onchange="renderMyLedger()">
+                      <option value="">Month</option>
+                      <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                      <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                      <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                      <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                   </select>
+                </div>
+                <div class="col-4">
+                   <select id="filterYear" class="form-select form-select-sm" onchange="renderMyLedger()">
+                      <option value="">Year</option>
+                      <option value="2024">2024</option><option value="2025">2025</option>
+                      <option value="2026">2026</option><option value="2027">2027</option>
+                   </select>
+                </div>
+                <div class="col-4">
+                   <select id="filterStatus" class="form-select form-select-sm" onchange="renderMyLedger()">
+                      <option value="">All Types</option>
+                      <option value="Attendance">Attendance</option>
+                      <option value="Leave">Leave</option>
+                      <option value="Merit">Merit</option>
+                      <option value="Demerit">Demerit</option>
+                   </select>
+                </div>
+             </div>
+
+             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+               <table class="table table-sm table-bordered table-hover align-middle text-center">
+                 <thead class="table-dark sticky-top">
+                   <tr><th>Date</th><th>Type</th><th>Details</th><th>Status / Pts</th></tr>
+                 </thead>
+                 <tbody id="myLedgerBody">
+                   <tr><td colspan="4" class="text-muted py-3">Please select your profile to view history.</td></tr>
+                 </tbody>
+               </table>
+             </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="supabase-config.js"></script>
+
+  <script>
+    let pData = { emps: [], settings: { system: {}, leaveTypes: [] } }; 
+    let cLat = 0; let cLng = 0; let isGeoOK = false; let cTimeStatus = "";
+    let globalLedgerData = []; 
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const SCANNED_EMP = urlParams.get('emp') || "";
+    
+    window.onload = async () => {
+      try {
+        const { data: eData, error: eErr } = await supabase.from('employees').select('*');
+        const { data: sData, error: sErr } = await supabase.from('tms_settings').select('*');
+
+        if(eErr || sErr) throw new Error("Failed to fetch initial data.");
+
+        pData.emps = (eData || []).filter(e => e.status !== 'Inactive');
+        
+        let systemKeys = ['Office Lat', 'Office Lng', 'Geo Radius', 'Work Start', 'Work End'];
+        (sData || []).forEach(row => {
+          if(systemKeys.includes(row.category)) pData.settings.system[row.category] = row.subcategory;
+          if(row.category === 'Leave Type') pData.settings.leaveTypes.push(row.subcategory);
+        });
+
+        if(pData.emps.length === 0) {
+           document.getElementById('empSelect').innerHTML = '<option value="">No Active Employees Found</option>';
+           return;
+        }
+        
+        document.getElementById('empSelect').innerHTML = '<option value="">-- Select Your Name --</option>' + pData.emps.map(e => `<option value="${e.code}">${e.code} - ${e.name}</option>`).join('');
+        document.getElementById('leaveType').innerHTML = '<option value="">Select Leave Type...</option>' + pData.settings.leaveTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+        
+        if(SCANNED_EMP !== "") {
+            document.getElementById('empSelect').value = decodeURIComponent(SCANNED_EMP);
+            document.getElementById('selectBoxArea').style.display = 'none';
+            document.getElementById('portalTitle').innerHTML = "Universal Tractor Co., Ltd.<br><small style='font-size: 0.75rem;'>Individual Portal</small>";
+            loadProfile();
+        }
+
+      } catch (err) {
+        document.getElementById('empSelect').innerHTML = '<option value="">Error Loading Data</option>';
+        Swal.fire("Connection Error", err.message, "error");
+      }
+    };
+
+    function loadProfile() {
+      let code = document.getElementById('empSelect').value; 
+      let pBox = document.getElementById('profileBox'); 
+      let fSec = document.getElementById('formsSection');
+      
+      if(!code) { pBox.style.display = 'none'; fSec.style.display = 'none'; return; }
+      
+      let emp = pData.emps.find(e => e.code === code);
+      document.getElementById('profName').innerText = emp.name; 
+      document.getElementById('profPos').innerText = emp.position || 'Position Not Set';
+      document.getElementById('profDept').innerText = emp.dept ? emp.dept.replace('>', '-') : '';
+      document.getElementById('profCodeBadge').innerText = "ID: " + emp.code;
+      
+      let img = document.getElementById('profImg');
+      if(emp.photoUrl) { img.src = emp.photoUrl; img.style.display = 'block'; } else { img.style.display = 'none'; }
+      
+      pBox.style.display = 'flex'; fSec.style.display = 'block'; 
+      checkEnv(code);
+      fetchMyLedger(code); 
+    }
+
+    async function checkEnv(empCode) {
+      document.getElementById('btnIn').disabled = true; document.getElementById('btnOut').disabled = true;
+      document.getElementById('geoStat').innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Locating...';
+      document.getElementById('timeStat').innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Calculating...';
+
+      try {
+        let today = new Date().toLocaleString('en-GB').split(',')[0].trim(); // DD/MM/YYYY
+        
+        const { data, error } = await supabase.from('attendance').select('type').eq('emp_code', empCode).eq('date_str', today);
+        if(error) throw error;
+        
+        let status = { in: false, out: false };
+        if (data) {
+          data.forEach(a => {
+            if(a.type === 'Check-In') status.in = true;
+            if(a.type === 'Check-Out') status.out = true;
+          });
+        }
+
+        // Time Calculation
+        let d = new Date(); let nowMins = d.getHours() * 60 + d.getMinutes();
+
+        let wStartRaw = String(pData.settings.system['Work Start'] || "09:00");
+        let wStartMins = 540; let wStartMatch = wStartRaw.match(/(\d+):(\d+)/);
+        if (wStartMatch) {
+            let hrs = parseInt(wStartMatch[1], 10); let mins = parseInt(wStartMatch[2], 10);
+            wStartMins = hrs * 60 + mins;
+        }
+
+        let wEndRaw = String(pData.settings.system['Work End'] || "17:00");
+        let wEndMins = 1020; let wEndMatch = wEndRaw.match(/(\d+):(\d+)/);
+        if (wEndMatch) {
+            let hrs = parseInt(wEndMatch[1], 10); let mins = parseInt(wEndMatch[2], 10);
+            wEndMins = hrs * 60 + mins;
+        }
+
+        let timeString = d.toTimeString().slice(0,5);
+        let timeLabel = "Completed";
+        let timeClass = "text-muted fw-bold";
+
+        if (!status.in) {
+            if (nowMins <= wStartMins) { timeLabel = "On Time"; timeClass = "text-success fw-bold"; }
+            else if (nowMins > wStartMins + 240) { timeLabel = "Half day"; timeClass = "text-danger fw-bold"; }
+            else { timeLabel = "Late"; timeClass = "text-danger fw-bold"; }
+        } else if (status.in && !status.out) {
+            if (nowMins < wEndMins) { timeLabel = "Early check out"; timeClass = "text-warning fw-bold"; }
+            else if (nowMins >= wEndMins + 60) { timeLabel = "Overtime"; timeClass = "text-primary fw-bold"; }
+            else { timeLabel = "On Time"; timeClass = "text-success fw-bold"; }
+        }
+
+        cTimeStatus = timeLabel; 
+        document.getElementById('timeStat').innerText = `${timeLabel} (Current: ${timeString})`;
+        document.getElementById('timeStat').className = timeClass;
+
+        // Geo Location Check
+        if(navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => {
+            cLat = pos.coords.latitude; cLng = pos.coords.longitude;
+            let oLat = parseFloat(pData.settings.system['Office Lat'] || 0); let oLng = parseFloat(pData.settings.system['Office Lng'] || 0);
+            let rad = parseFloat(pData.settings.system['Geo Radius'] || 100);
+            let dist = getDist(cLat, cLng, oLat, oLng); isGeoOK = dist <= rad;
+            
+            if(isGeoOK) {
+              document.getElementById('geoStat').innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Inside Zone (${Math.round(dist)}m)</span>`;
+              if(!status.in) document.getElementById('btnIn').disabled = false;
+              if(status.in && !status.out) document.getElementById('btnOut').disabled = false;
+            } else {
+              document.getElementById('geoStat').innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Outside Zone (${Math.round(dist)}m)</span>`;
+            }
+            if(status.in && status.out) document.getElementById('geoStat').innerHTML += " <br>(Completed Today)";
+          }, () => { document.getElementById('geoStat').innerText = "GPS Access Denied."; }, { enableHighAccuracy: true });
+        } else { document.getElementById('geoStat').innerText = "GPS not supported."; }
+
+      } catch (err) {
+         document.getElementById('timeStat').innerText = "Error fetching status";
+      }
+    }
+
+    function getDist(lat1, lon1, lat2, lon2) {
+      let p = 0.017453292519943295; let c = Math.cos; return 12742000 * Math.asin(Math.sqrt(0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2)); 
+    }
+
+    async function submitAtt(type) {
+      if(!isGeoOK) return Swal.fire("Error", "You must be inside the office zone.", "error");
+      
+      let code = document.getElementById('empSelect').value;
+      let empObj = pData.emps.find(e => e.code === code);
+      let empName = empObj ? empObj.name : "Unknown";
+
+      document.getElementById('btnIn').disabled = true; document.getElementById('btnOut').disabled = true;
+      
+      let dateStr = new Date().toLocaleString('en-GB').split(',')[0].trim();
+      let timeStr = new Date().toTimeString().slice(0,8);
+      let locStr = `${cLat}, ${cLng}`;
+      let geoStatus = "Inside Zone";
+      
+      let payload = {
+         date_str: dateStr,
+         time_str: timeStr,
+         emp_code: code,
+         emp_name: empName,
+         type: type,
+         location: locStr,
+         geo_status: geoStatus,
+         time_status: cTimeStatus
+      };
+
+      try {
+        const { error } = await supabase.from('attendance').insert([payload]);
+        if(error) throw error;
+        Swal.fire("Success", `${type} recorded successfully. [${cTimeStatus}]`, "success");
+        checkEnv(code); 
+        fetchMyLedger(code);
+      } catch (err) {
+        Swal.fire("Error", err.message, "error");
+        checkEnv(code);
+      }
+    }
+
+    function checkLeaveType() {
+      let type = document.getElementById('leaveType').value;
+      document.getElementById('photoUploadBox').style.display = type.toLowerCase().includes('medical') ? 'block' : 'none';
+    }
+
+    function calcDays() {
+      let d1 = new Date(document.getElementById('lStart').value); let d2 = new Date(document.getElementById('lEnd').value);
+      document.getElementById('lDays').value = (d1 && d2 && d2 >= d1) ? Math.ceil(Math.abs(d2 - d1) / 86400000) + 1 : '';
+    }
+
+    async function submitLeave() {
+      let code = document.getElementById('empSelect').value; let type = document.getElementById('leaveType').value;
+      let start = document.getElementById('lStart').value; let days = document.getElementById('lDays').value;
+      let reason = document.getElementById('lReason').value; let fileIn = document.getElementById('lPhoto');
+      let isMed = type.toLowerCase().includes('medical');
+      
+      if(!type || !start || !days) return Swal.fire("Incomplete", "Please fill required fields.", "warning");
+      if(isMed && fileIn.files.length === 0) return Swal.fire("Required", "Please attach a Medical Certificate.", "warning");
+      
+      let btn = document.getElementById('btnLeave'); btn.disabled = true; btn.innerText = "Submitting...";
+      
+      let empObj = pData.emps.find(e => e.code === code);
+      let applyDate = new Date().toLocaleString('en-GB').split(',')[0].trim();
+
+      let payload = { 
+        apply_date: applyDate,
+        emp_code: code, 
+        emp_name: empObj ? empObj.name : "Unknown",
+        leave_type: type, 
+        start_date: start, 
+        end_date: document.getElementById('lEnd').value, 
+        total_days: days, 
+        reason: reason,
+        status: "Pending"
+      };
+      
+      try {
+        if(isMed) {
+          let file = fileIn.files[0];
+          let fileName = `medcert_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+          const { error: uploadError } = await supabase.storage.from('tms_photos').upload(fileName, file);
+          if(uploadError) throw uploadError;
+          const { data: urlData } = supabase.storage.from('tms_photos').getPublicUrl(fileName);
+          payload.photoUrl = urlData.publicUrl;
+        }
+
+        const { error } = await supabase.from('leave').insert([payload]);
+        if(error) throw error;
+
+        Swal.fire("Success", "Leave application submitted successfully.", "success"); 
+        ['lStart','lEnd','lDays','lReason','lPhoto'].forEach(id => document.getElementById(id).value = '');
+        fetchMyLedger(code); 
+      } catch (err) {
+        Swal.fire("Error", err.message, "error");
+      } finally {
+        btn.disabled = false; btn.innerText = "Submit Application";
+      }
+    }
+
+    async function fetchMyLedger(empCode) {
+      document.getElementById('myLedgerBody').innerHTML = '<tr><td colspan="4" class="text-muted py-3"><span class="spinner-border spinner-border-sm"></span> Fetching Data...</td></tr>';
+      
+      try {
+        const { data: attData, error: aErr } = await supabase.from('attendance').select('*').eq('emp_code', empCode);
+        const { data: lvData, error: lErr } = await supabase.from('leave').select('*').eq('emp_code', empCode);
+        const { data: recData, error: rErr } = await supabase.from('records').select('*').eq('emp_code', empCode);
+
+        if(aErr || lErr || rErr) throw new Error("Failed to fetch ledger data.");
+
+        globalLedgerData = [];
+        
+        // Helper to parse en-GB date strings (DD/MM/YYYY)
+        function parseDate(dateStr) {
+           let parts = dateStr.split('/');
+           if(parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+           return new Date(dateStr);
+        }
+        
+        (attData || []).forEach(a => {
+           let dObj = parseDate(a.date_str);
+           globalLedgerData.push({ time: isNaN(dObj)? new Date().getTime() : dObj.getTime(), dateStr: a.date_str + " " + a.time_str, catType: "Attendance", typeHtml: '<span class="badge bg-info text-dark">Attendance</span>', details: `${a.type}`, status: a.time_status });
+        });
+
+        (lvData || []).forEach(l => {
+           let dObj = parseDate(l.apply_date);
+           globalLedgerData.push({ time: isNaN(dObj)? 0 : dObj.getTime(), dateStr: l.apply_date, catType: "Leave", typeHtml: '<span class="badge bg-warning text-dark">Leave</span>', details: `${l.leave_type} (${l.total_days} Days)`, status: l.status });
+        });
+
+        (recData || []).forEach(r => {
+           let isMerit = r.type === 'MERIT';
+           let dObj = parseDate(r.date_str.split(',')[0]); 
+           let typeName = isMerit ? "Merit" : "Demerit";
+           globalLedgerData.push({ time: isNaN(dObj)? 0 : dObj.getTime(), dateStr: r.date_str, catType: typeName, typeHtml: isMerit ? '<span class="badge bg-success">Merit</span>' : '<span class="badge bg-danger">Demerit</span>', details: r.line_remark || 'Official Record', status: (isMerit ? '+' : '-') + r.points + ' Pts' });
+        });
+
+        globalLedgerData.sort((a,b) => b.time - a.time);
+        renderMyLedger();
+
+      } catch (err) {
+         document.getElementById('myLedgerBody').innerHTML = `<tr><td colspan="4" class="text-danger py-3">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderMyLedger() {
+       let fMonth = document.getElementById('filterMonth').value;
+       let fYear = document.getElementById('filterYear').value;
+       let fStatus = document.getElementById('filterStatus').value;
+
+       let filtered = globalLedgerData.filter(d => {
+          let dObj = new Date(d.time);
+          let matchM = fMonth === "" || (dObj.getMonth() + 1).toString() === fMonth;
+          let matchY = fYear === "" || dObj.getFullYear().toString() === fYear;
+          let matchS = fStatus === "" || d.catType === fStatus;
+          return matchM && matchY && matchS;
+       });
+
+       let html = '';
+       if(filtered.length === 0) {
+          html = '<tr><td colspan="4" class="text-muted py-3">No records found.</td></tr>';
+       } else {
+          filtered.forEach(d => {
+             let statClass = (d.status.includes('Late') || d.status.includes('Half') || d.status.includes('-') || d.status === 'Rejected') ? 'text-danger fw-bold' : 'text-success fw-bold';
+             if(d.status.includes('Pending')) statClass = 'text-warning fw-bold';
+             html += `<tr><td class="small text-nowrap">${d.dateStr}</td><td>${d.typeHtml}</td><td class="small text-start">${d.details}</td><td class="${statClass} small text-nowrap">${d.status}</td></tr>`;
+          });
+       }
+       document.getElementById('myLedgerBody').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
